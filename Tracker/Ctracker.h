@@ -22,22 +22,22 @@ public:
         FilterCenter = 0,
         FilterRect = 1
     };
-	enum MatchType
-	{
-		MatchHungrian = 0,
-		MatchBipart = 1
-	};
+    enum MatchType
+    {
+        MatchHungrian = 0,
+        MatchBipart = 1
+    };
 
     CTracker(bool useLocalTracking,
              DistType distType,
              KalmanType kalmanType,
-			 MatchType matchType,
+             MatchType matchType,
              track_t dt_,
              track_t accelNoiseMag_,
              track_t dist_thres_ = 60,
              size_t maximum_allowed_skipped_frames_ = 10,
              size_t max_trace_length_ = 10);
-	~CTracker(void);
+    ~CTracker(void);
 
     tracks_t tracks;
     void Update(const std::vector<Point_t>& detections, const regions_t& regions, cv::Mat gray_frame);
@@ -48,22 +48,22 @@ private:
 
     DistType m_distType;
     KalmanType m_kalmanType;
-	MatchType m_matchType;
+    MatchType m_matchType;
 
-	// Шаг времени опроса фильтра
-	track_t dt;
+    // Filter time interval
+    track_t dt;
 
-	track_t accelNoiseMag;
+    track_t accelNoiseMag;
 
-	// Порог расстояния. Если точки находятся дуг от друга на расстоянии,
-	// превышающем этот порог, то эта пара не рассматривается в задаче о назначениях.
-	track_t dist_thres;
-	// Максимальное количество кадров которое трек сохраняется не получая данных о измерений.
+    // Distance threshold. If the points are arcs from a friend at a distance,
+    // Exceeding this threshold, this pair is not considered in the assignment problem
+    track_t dist_thres;
+    // The maximum number of frames that a track is saved without receiving measurement data 
     size_t maximum_allowed_skipped_frames;
-	// Максимальная длина следа
+    // Max trace length 
     size_t max_trace_length;
 
-	size_t NextTrackID;
+    size_t NextTrackID;
 
     LocalTracker localTracker;
 };

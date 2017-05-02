@@ -8,7 +8,7 @@ class TKalmanFilter
 public:
     TKalmanFilter(Point_t pt, track_t deltaTime = 0.2, track_t accelNoiseMag = 0.5);
     TKalmanFilter(cv::Rect rect, track_t deltaTime = 0.2, track_t accelNoiseMag = 0.5);
-	~TKalmanFilter();
+    ~TKalmanFilter();
 
     Point_t GetPointPrediction();
     Point_t Update(Point_t p, bool dataCorrect);

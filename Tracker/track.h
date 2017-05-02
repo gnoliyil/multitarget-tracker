@@ -107,14 +107,14 @@ public:
             size_t trackID,
             bool filterObjectSize
             )
-		:
-		track_id(trackID),
-		skipped_frames(0),
+        :
+        track_id(trackID),
+        skipped_frames(0),
         lastRegion(region),
         pointsCount(0),
         m_predictionPoint(pt),
         m_filterObjectSize(filterObjectSize)
-	{
+    {
         if (filterObjectSize)
         {
             m_kalman = new TKalmanFilter(region.m_rect, deltaTime, accelNoiseMag);
@@ -124,54 +124,54 @@ public:
             m_kalman = new TKalmanFilter(pt, deltaTime, accelNoiseMag);
         }
         trace.push_back(pt, pt);
-	}
+    }
 
     track_t CalcDist(const Point_t& pt)
-	{
+    {
         Point_t diff = m_predictionPoint - pt;
-		return sqrtf(diff.x * diff.x + diff.y * diff.y);
-	}
+        return sqrtf(diff.x * diff.x + diff.y * diff.y);
+    }
 
-	track_t CalcDist(const cv::Rect& r)
-	{
-		std::array<track_t, 4> diff;
+    track_t CalcDist(const cv::Rect& r)
+    {
+        std::array<track_t, 4> diff;
         diff[0] = m_predictionPoint.x - lastRegion.m_rect.width / 2 - r.x;
         diff[1] = m_predictionPoint.y - lastRegion.m_rect.height / 2 - r.y;
         diff[2] = static_cast<track_t>(lastRegion.m_rect.width - r.width);
         diff[3] = static_cast<track_t>(lastRegion.m_rect.height - r.height);
 
-		track_t dist = 0;
-		for (size_t i = 0; i < diff.size(); ++i)
-		{
-			dist += diff[i] * diff[i];
-		}
-		return sqrtf(dist);
-	}
+        track_t dist = 0;
+        for (size_t i = 0; i < diff.size(); ++i)
+        {
+            dist += diff[i] * diff[i];
+        }
+        return sqrtf(dist);
+    }
 
     void Update(const Point_t& pt, const CRegion& region, bool dataCorrect, size_t max_trace_length)
-	{
+    {
         if (m_filterObjectSize)
         {
             m_kalman->GetRectPrediction();
 
-			if (boundidgRect.area() > 0)
-			{
-				if (dataCorrect)
-				{
-					cv::Rect prect(
-						(boundidgRect.x + region.m_rect.x) / 2,
-						(boundidgRect.y + region.m_rect.y) / 2,
-						(boundidgRect.width + region.m_rect.width) / 2,
-						(boundidgRect.height + region.m_rect.height) / 2);
+            if (boundidgRect.area() > 0)
+            {
+                if (dataCorrect)
+                {
+                    cv::Rect prect(
+                        (boundidgRect.x + region.m_rect.x) / 2,
+                        (boundidgRect.y + region.m_rect.y) / 2,
+                        (boundidgRect.width + region.m_rect.width) / 2,
+                        (boundidgRect.height + region.m_rect.height) / 2);
 
-					m_predictionRect = m_kalman->Update(prect, dataCorrect);
-				}
-				else
-				{
-					m_predictionRect = m_kalman->Update(boundidgRect, dataCorrect);
-				}
-			}
-			else
+                    m_predictionRect = m_kalman->Update(prect, dataCorrect);
+                }
+                else
+                {
+                    m_predictionRect = m_kalman->Update(boundidgRect, dataCorrect);
+                }
+            }
+            else
             {
                 m_predictionRect = m_kalman->Update(region.m_rect, dataCorrect);
             }
@@ -234,15 +234,15 @@ public:
     }
 
     Trace trace;
-	size_t track_id;
-	size_t skipped_frames; 
+    size_t track_id;
+    size_t skipped_frames; 
     CRegion lastRegion;
     int pointsCount;
     Point_t averagePoint;   ///< Average point after LocalTracking
-	cv::Rect boundidgRect;  ///< Bounding rect after LocalTracking
+    cv::Rect boundidgRect;  ///< Bounding rect after LocalTracking
 
     cv::Rect GetLastRect() const
-	{
+    {
         if (m_filterObjectSize)
         {
             return m_predictionRect;
