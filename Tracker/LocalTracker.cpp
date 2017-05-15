@@ -86,7 +86,8 @@ void LocalTracker::Update(
 
         if (track->pointsCount)
         {
-            track->averagePoint /= track->pointsCount;
+            Point_t avg = track->averagePoint;
+            track->averagePoint = Point_t(avg.x / track->pointsCount, avg.y / track->pointsCount);
 
             cv::Rect br = cv::boundingRect(std::vector<cv::Point2f>(points[1].begin() + from, points[1].begin() + k));
             br.x -= subPixWinSize.width;

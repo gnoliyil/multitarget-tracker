@@ -40,7 +40,15 @@ public:
     ~CTracker(void);
 
     tracks_t tracks;
-    void Update(const std::vector<Point_t>& detections, const regions_t& regions, cv::Mat gray_frame);
+    void Update(const std::vector<Point_t>& detections,
+                const regions_t& regions, cv::Mat image);
+
+    static void calcColorHistogram(const cv::Mat& image, const cv::Mat& blobMask, const int& bins, const int& channels,
+                                   const int& colorspace, cv::Mat& histogram);
+
+    static void createNegativeHistograms(const cv::Mat& image, const cv::Mat& mask, const int n, const int bins,
+                                         std::vector<cv::Mat>& negative_histograms);
+
 
 private:
     // Use local tracking for regions between two frames
@@ -58,9 +66,9 @@ private:
     // Distance threshold. If the points are arcs from a friend at a distance,
     // Exceeding this threshold, this pair is not considered in the assignment problem
     track_t dist_thres;
-    // The maximum number of frames that a track is saved without receiving measurement data 
+    // The maximum number of frames that a track is saved without receiving measurement data
     size_t maximum_allowed_skipped_frames;
-    // Max trace length 
+    // Max trace length
     size_t max_trace_length;
 
     size_t NextTrackID;

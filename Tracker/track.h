@@ -7,6 +7,7 @@
 
 #include "defines.h"
 #include "Kalman.h"
+#include "adaboost/adaboost.h"
 
 // --------------------------------------------------------------------------
 struct TrajectoryPoint
@@ -109,11 +110,15 @@ public:
             )
         :
         track_id(trackID),
+
         skipped_frames(0),
         lastRegion(region),
         pointsCount(0),
+        age(0),
         m_predictionPoint(pt),
-        m_filterObjectSize(filterObjectSize)
+        m_filterObjectSize(filterObjectSize),
+        classifier(NUM_CLASSIFIER, NUM_SELECTOR),
+        color_never_updated(true)
     {
         if (filterObjectSize)
         {
@@ -124,6 +129,8 @@ public:
             m_kalman = new TKalmanFilter(pt, deltaTime, accelNoiseMag);
         }
         trace.push_back(pt, pt);
+        for(int i = 0; i < NUM_CLASSIFIER; i++)
+            classifier.createWeakClassifier<_ColorWeakClassifier>();
     }
 
     track_t CalcDist(const Point_t& pt)
@@ -148,13 +155,22 @@ public:
         return sqrtf(dist);
     }
 
-    void Update(const Point_t& pt, const CRegion& region, bool dataCorrect, size_t max_trace_length)
+    void Update(const Point_t& pt, const std::vector<cv::Mat> & histograms,
+                const CRegion& region, bool dataCorrect, size_t max_trace_length)
+    // ARGS: histograms[0] represents the positive histogram,
+    //       histograms[1..N] represents the negative histograms
+
+    // TODO: arguments should include image and ROI, we need to update the color classifier.
     {
+        if (dataCorrect) // if the track gets updated from detections, age += 1
+        {
+            age += 1;
+        }
         if (m_filterObjectSize)
         {
             m_kalman->GetRectPrediction();
 
-            if (boundidgRect.area() > 0)
+            if (boundidgRect.area() > 0) //have bounding rectangle
             {
                 if (dataCorrect)
                 {
@@ -175,7 +191,8 @@ public:
             {
                 m_predictionRect = m_kalman->Update(region.m_rect, dataCorrect);
             }
-            m_predictionPoint = (m_predictionRect.tl() + m_predictionRect.br()) / 2;
+            m_predictionPoint = (m_predictionRect.tl() + m_predictionRect.br());
+            m_predictionPoint = Point_t( m_predictionPoint.x / 2, m_predictionPoint.y / 2);
         }
         else // Kalman filter only for object center
         {
@@ -185,7 +202,9 @@ public:
             {
                 if (dataCorrect)
                 {
-                    m_predictionPoint = m_kalman->Update((pt + averagePoint) / 2, dataCorrect);
+                    Point_t tmp = pt + averagePoint;
+                    tmp = Point_t(tmp.x / 2, tmp.y / 2);
+                    m_predictionPoint = m_kalman->Update(tmp, dataCorrect);
                 }
                 else
                 {
@@ -195,6 +214,24 @@ public:
             else
             {
                 m_predictionPoint = m_kalman->Update(pt, dataCorrect);
+            }
+        }
+
+        if (dataCorrect)
+        {
+            assert(histograms.size() > 1);  // at least one + and one - sample
+            cv::Mat positive_histogram = histograms[0];
+
+            // update positive histogram
+            _ColorWeakClassifier* weak;
+            classifier.update(cv::Point(0, 0), 1, positive_histogram, NUM_DRAW_FEATURES);
+            weak = classifier.replaceWorstWeakClassifier<_ColorWeakClassifier>();
+
+            // update negative histograms
+            for (size_t i = 1; i < histograms.size(); i++)
+            {
+                classifier.update(cv::Point(0, 0), -1, histograms[i], NUM_DRAW_FEATURES);
+                weak = classifier.replaceWorstWeakClassifier<_ColorWeakClassifier>();
             }
         }
 
@@ -235,11 +272,13 @@ public:
 
     Trace trace;
     size_t track_id;
-    size_t skipped_frames; 
+    size_t skipped_frames;
     CRegion lastRegion;
     int pointsCount;
     Point_t averagePoint;   ///< Average point after LocalTracking
     cv::Rect boundidgRect;  ///< Bounding rect after LocalTracking
+    adaboost::StrongClassifier classifier;
+    bool color_never_updated;
 
     cv::Rect GetLastRect() const
     {
