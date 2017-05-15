@@ -273,6 +273,7 @@ public:
     Trace trace;
     size_t track_id;
     size_t skipped_frames;
+    size_t age;
     CRegion lastRegion;
     int pointsCount;
     Point_t averagePoint;   ///< Average point after LocalTracking

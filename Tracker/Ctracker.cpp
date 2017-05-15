@@ -183,6 +183,7 @@ void CTracker::Update(
     size_t M = detections.size();    // детекты
 
     assignments_t assignment(N, -1); // назначения
+    assignments_t assignment_new_tracks(N, -1);
 
     if (!tracks.empty())
     {
@@ -320,6 +321,63 @@ void CTracker::Update(
         }
         printf("\n");
     
+        distMatrix_t Cost_without_new(Cost), Cost_with_new(Cost);
+    
+        std::vector<size_t> new_tracks;
+        const int NEW_TRACK_THRESHOLD = 3;
+        const int LARGE_VALUE = 999999;
+    
+        for (size_t i = 0; i < tracks.size(); i++)
+        {
+            if (tracks[i]->age <= NEW_TRACK_THRESHOLD)
+            {
+                new_tracks.push_back(i);
+                for (int j = 0; j < detections.size(); j++)
+                    Cost_without_new[i + j * N] = LARGE_VALUE;
+            }
+        }
+    
+        // -----------------------------------
+        // Solving assignment problem (tracks and predictions of Kalman filter)
+        // -----------------------------------
+        if (m_matchType == MatchHungrian)
+        {
+            AssignmentProblemSolver APS;
+            APS.Solve(Cost_without_new, N, M, assignment, AssignmentProblemSolver::optimal);
+        }
+        else
+            assert(0);
+        
+        // i - track, assignment[i] - detections
+        for (int i = 0; i < assignment.size(); i++)
+        {
+            if (assignment[i] != -1)
+            {
+                if (Cost_without_new[i + assignment[i] * N] >= LARGE_VALUE)
+                    assignment[i] = -1;
+                else
+                {
+                    for (int j = 0; j < detections.size(); j++)
+                        Cost_with_new[i + j * N] = LARGE_VALUE;  //avoid using used tracks
+                    for (int k = 0; k < tracks.size(); k++)
+                        Cost_with_new[k + assignment[i] * N] = LARGE_VALUE;
+                }
+            }
+        }
+    
+        if (m_matchType == MatchHungrian)
+        {
+            AssignmentProblemSolver APS;
+            APS.Solve(Cost_with_new, N, M, assignment_new_tracks, AssignmentProblemSolver::optimal);
+        }
+        else
+            assert(0);
+        
+        for (int i = 0; i < assignment_new_tracks.size(); i++)
+            if (assignment_new_tracks[i] != -1 &&
+                    Cost_with_new[i + assignment_new_tracks[i] * N] < LARGE_VALUE)
+                assignment[i] = assignment_new_tracks[i];
+        
         // -----------------------------------
         // clean assignment from pairs with large distance
         // -----------------------------------
