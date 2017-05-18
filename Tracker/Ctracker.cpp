@@ -243,8 +243,8 @@ void CTracker::Update(
         }
 
         // Use methods in Hoshikawa, et al. (2009) in order to normalize the Euclidean distance
-        /* distMatrix_t Cost_backup(Cost);
-        const double DISTANCE_THRESHOLD = 15.0;
+        distMatrix_t Cost_backup(Cost);
+        const double DISTANCE_THRESHOLD = 30.0;
         for (size_t i = 0; i < tracks.size(); i++)
         {
             int count_near = 0;
@@ -274,8 +274,7 @@ void CTracker::Update(
                 for (size_t j = 0; j < detections.size(); j++)
                     for (size_t k = j + 1; k < detections.size(); k++)
                     {
-                        double dist = sqrt((detections[j].x - detections[k].x) * (detections[j].x - detections[k].x)
-                                (detections[j].y - detections[k].y) * (detections[j].y - detections[k].y));
+                        double dist = fabs(Cost_backup[i + j * N] - Cost_backup[i + k * N]);
                         if (dist < distance_min)
                             distance_min = dist;
                     }
@@ -286,11 +285,11 @@ void CTracker::Update(
             for (size_t j = 0; j < detections.size(); j++)
             {
                 double cost_dist = Cost[i + j * N];
-                double cost_color = 10.0 / (1 + exp(CostColor[i + j * N]));
-                Cost[i + j * N] = alpha * cost_dist + (1 - alpha)  * cost_color;
+                double cost_color = exp(3 / (1 + exp(5 * CostColor[i + j * N])));
+                Cost[i + j * N] = alpha * 2 * cost_dist / DISTANCE_THRESHOLD + (1 - alpha)  * cost_color;
             }
 
-        } */  //seems not working
+        }  //seems not working
 
         // for debug (yilong)
         printf("--------- Distance Matrix ---------\n"
@@ -300,7 +299,7 @@ void CTracker::Update(
         {
             for (size_t i = 0; i < tracks.size(); i++)
             {
-                auto  dist = Cost[i + j * N];
+                auto  dist = Cost_backup[i + j * N];
                 printf("%8.3f", dist);
             }
             printf("\n");
@@ -315,6 +314,20 @@ void CTracker::Update(
             for (size_t i = 0; i < tracks.size(); i++)
             {
                 auto dist = CostColor[i + j * N];
+                printf("%8.3f", dist);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        printf("--------- Fused Dist Matrix ---------\n"
+                       "   ROW: DETECTION(N), COL: TRACK   \n");
+
+        for (size_t j = 0; j < detections.size(); j++)
+        {
+            for (size_t i = 0; i < tracks.size(); i++)
+            {
+                auto dist = Cost[i + j * N];
                 printf("%8.3f", dist);
             }
             printf("\n");
@@ -403,7 +416,8 @@ void CTracker::Update(
         // -----------------------------------
         for (int i = 0; i < static_cast<int>(tracks.size()); i++)
         {
-            if (tracks[i]->skipped_frames > maximum_allowed_skipped_frames)
+            if ((tracks[i]->age < NEW_TRACK_THRESHOLD && tracks[i]->skipped_frames > 1) ||
+                    (tracks[i]->skipped_frames > maximum_allowed_skipped_frames))
             {
                 tracks.erase(tracks.begin() + i);
                 assignment.erase(assignment.begin() + i);
