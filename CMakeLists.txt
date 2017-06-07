@@ -4,6 +4,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(MultitargetTracker)
 
+set(CMAKE_CXX_COMPILER g++-5)
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic-errors --std=gnu++14" CACHE STRING COMPILE_FLAGS FORCE)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -march=native -mtune=native --fast-math -ffast-math -funroll-loops -Wall -DNDEBUG -DBOOST_DISABLE_ASSERTS" CACHE STRING COMPILE_FLAGS FORCE)
@@ -24,7 +25,10 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 # ----------------------------------------------------------------------------  
 # ищем все .cpp и .h файлы и добавляем их в наш проект 
 # ----------------------------------------------------------------------------
-  set(folder_source  main.cpp
+set(adaboost_source adaboost/Selector.cpp
+            adaboost/StrongClassifier.cpp)
+
+  set(folder_source  # main.cpp
              Detector/Detector.cpp
              HungarianAlg/HungarianAlg.cpp
              vibe_src/BackgroundSubtract.cpp
@@ -141,7 +145,7 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
   SOURCE_GROUP("graph" FILES ${graph_source} ${graph_header})
   SOURCE_GROUP("GTL" FILES ${gtl_source} ${gtl_header})
 
-option(USE_OCV_BGFG "Should the bgfg algorithms from opencv_contrib?" ON)
+  option(USE_OCV_BGFG "Should the bgfg algorithms from opencv_contrib?" 0)
 if(USE_OCV_BGFG)
     add_definitions(-DUSE_OCV_BGFG)
 endif(USE_OCV_BGFG)
@@ -149,10 +153,14 @@ endif(USE_OCV_BGFG)
 # ----------------------------------------------------------------------------  
 # создаем проект
 # ----------------------------------------------------------------------------
-  ADD_EXECUTABLE(MultitargetTracker ${folder_source} ${folder_header} ${graph_source} ${graph_header} ${gtl_source} ${gtl_header})
+  ADD_executable(adaboost_demo adaboost/demo_adaboost.cpp ${adaboost_source})
+  ADD_library(adaboost ${adaboost_source})
+  ADD_library(tracker ${folder_source} ${folder_header} ${graph_source} ${graph_header} ${gtl_source} ${gtl_header})
 # ----------------------------------------------------------------------------   
 # добавляем include директории
 # ----------------------------------------------------------------------------
+  INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include )
+
   INCLUDE_DIRECTORIES(
 		      ${PROJECT_SOURCE_DIR}/Detector
 		      ${PROJECT_SOURCE_DIR}/HungarianAlg
@@ -166,4 +174,6 @@ endif(USE_OCV_BGFG)
 # ----------------------------------------------------------------------------
 # и Lib-ы opencv 
 # ----------------------------------------------------------------------------
-  TARGET_LINK_LIBRARIES(MultitargetTracker ${OpenCV_LIBS})
+  TARGET_LINK_LIBRARIES(tracker ${OpenCV_LIBS})
+  TARGET_LINK_LIBRARIES(adaboost ${OpenCV_LIBS})
+  TARGET_LINK_LIBRARIES(adaboost_demo ${OpenCV_LIBS})
